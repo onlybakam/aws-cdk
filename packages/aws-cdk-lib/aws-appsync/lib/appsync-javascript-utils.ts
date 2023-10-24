@@ -82,7 +82,8 @@ export function doBundling(entryFile: string, options: AppSyncBundlingOptions) {
               osPlatform === 'win32' ? '/c' : '-c',
               [
                 'esbuild',
-                `--bundle ${sourceMap}`,
+                '--bundle',
+                `${sourceMap}`,
                 '--target=esnext',
                 '--platform=node',
                 '--format=esm',
