@@ -1,3 +1,5 @@
+import { doBundling, findResolverEntry, getResolverName } from './appsync-javascript-utils';
+import { CfnResolver } from './appsync.generated';
 import {
   DynamoDbDataSource,
   HttpDataSource,
@@ -10,6 +12,8 @@ import {
   EventBridgeDataSource,
 } from './data-source';
 import { Resolver, ExtendedResolverProps } from './resolver';
+import { FunctionRuntime } from './runtime';
+import { AppSyncJsPipelineResolverProps } from './types';
 import { ITable } from '../../aws-dynamodb';
 import { IDomain as IElasticsearchDomain } from '../../aws-elasticsearch';
 import { IEventBus } from '../../aws-events';
@@ -324,6 +328,35 @@ export abstract class GraphqlApiBase extends Resource implements IGraphqlApi {
       api: this,
       ...props,
     });
+  }
+
+  /**
+   * creates a new Js pipeline resolver for this datasource and API using the given properties
+   */
+  public createJsPipelineResolver(
+    typeName: string,
+    fieldName: string,
+    props?: AppSyncJsPipelineResolverProps): Resolver {
+    const { resolverFile, resolverDir, bundling, functions, ...resolverProps } = props ?? {};
+    if (resolverFile && resolverDir) {
+      throw new Error('Only one of resolverFile or resolverDir is allowed.');
+    }
+
+    const entryFile = findResolverEntry(typeName, fieldName, resolverFile, resolverDir, true);
+    const resolver = new Resolver(this, getResolverName(typeName, fieldName), {
+      api: this,
+      typeName,
+      fieldName,
+      runtime: FunctionRuntime.JS_1_0_0,
+      code: doBundling(entryFile, bundling ?? {}),
+      ...resolverProps,
+    });
+    const node = this.node.defaultChild as CfnResolver;
+    node.kind = 'PIPELINE';
+    node.pipelineConfig = {
+      functions: (functions ?? []).map((f) => f.functionId),
+    };
+    return resolver;
   }
 
   /**

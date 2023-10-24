@@ -1,8 +1,11 @@
 import { Construct } from 'constructs';
 import { BaseAppsyncFunctionProps, AppsyncFunction } from './appsync-function';
+import { doBundling, findFunctionEntry, findResolverEntry, getResolverName } from './appsync-javascript-utils';
 import { CfnDataSource } from './appsync.generated';
 import { IGraphqlApi } from './graphqlapi-base';
 import { BaseResolverProps, Resolver } from './resolver';
+import { FunctionRuntime } from './runtime';
+import { AppSyncJsFunctionProps, AppSyncJsResolverProps } from './types';
 import { ITable } from '../../aws-dynamodb';
 import { IDomain as IElasticsearchDomain } from '../../aws-elasticsearch';
 import { IEventBus } from '../../aws-events';
@@ -157,6 +160,45 @@ export abstract class BaseDataSource extends Construct {
       api: this.api,
       dataSource: this,
       ...props,
+    });
+  }
+
+  /**
+   * creates a new JavaScript unit resolver for this datasource and API using the given properties
+   */
+  public createJsResolver(typeName: string, fieldName: string, props?: AppSyncJsResolverProps): Resolver {
+    const { resolverFile, resolverDir, bundling, ...resolverProps } = props ?? {};
+    if (resolverFile && resolverDir) {
+      throw new Error('Only one of resolverFile or resolverDir is allowed.');
+    }
+    const entryFile = findResolverEntry(typeName, fieldName, resolverFile, resolverDir);
+    return new Resolver(this.api, getResolverName(typeName, fieldName), {
+      api: this.api,
+      dataSource: this,
+      typeName,
+      fieldName,
+      runtime: FunctionRuntime.JS_1_0_0,
+      code: doBundling(entryFile, bundling ?? {}),
+      ...resolverProps,
+    });
+  }
+
+  /**
+   * creates a new JavaScript function for this datasource and API using the given properties
+   */
+  public createJsFunction(name: string, props?: AppSyncJsFunctionProps): AppsyncFunction {
+    const { functionFile, functionDir, bundling, ...functionProps } = props ?? {};
+    if (functionFile && functionDir) {
+      throw new Error('Only one of functionFile or functionDir is allowed.');
+    }
+    const entryFile = findFunctionEntry(name, functionFile, functionDir);
+    return new AppsyncFunction(this.api, name, {
+      api: this.api,
+      dataSource: this,
+      name,
+      runtime: FunctionRuntime.JS_1_0_0,
+      code: doBundling(entryFile, bundling ?? {}),
+      ...functionProps,
     });
   }
 }
