@@ -141,7 +141,7 @@ export function getResolverName(typeName: string, fieldName: string) {
  * Searches for a resolver file. Preference order is the following:
  * 1. Given `${resolverFile}`
  * 2. A file named `${resolverDir}/${typeName}.{fieldName}.[ts|js]`
- * 3. A file named `${typeName}.{fieldName}.[ts|js]`
+ * 3. A file named `resolvers/${typeName}.{fieldName}.[ts|js]` in the directory of the defining file.
  */
 export function findResolverEntry(
   typeName: string,
@@ -185,10 +185,9 @@ export function findResolverEntry(
 /**
  * Searches for function file. Preference order is the following:
  * 1. Given `${functionFile}`
- * 2. A file named `${functionDir}/${name} where name has a [ts|js] extension`
- * 3. A file named `${functionDir}/${name}.[ts|js]`
- * 2. A file named `functions/${name} where name has a [ts|js] extension`
- * 4. A file named `functions/${name}.[ts|js]`
+ * 2. A file named `${functionDir}/${name}.[ts|js]`
+ * 3. A file named `functions/${name}.[ts|js]` in the directory of the defining file.
+ * Note: `name` can provide the file extension.
  */
 export function findFunctionEntry(name: string, functionFile?: string, functionDir?: string): string {
   if (functionFile) {
