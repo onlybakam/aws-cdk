@@ -26,8 +26,8 @@ new ApplicationMultipleTargetGroupsEc2Service(stack, 'myService', {
   enableExecuteCommand: true,
   loadBalancers: [
     {
-      name: 'lb',
-      idleTimeout: Duration.seconds(400),
+      name: 'lb1',
+      idleTimeout: Duration.seconds(5),
       domainName: 'api.example.com',
       domainZone: zone,
       listeners: [
@@ -41,7 +41,7 @@ new ApplicationMultipleTargetGroupsEc2Service(stack, 'myService', {
     },
     {
       name: 'lb2',
-      idleTimeout: Duration.seconds(400),
+      idleTimeout: Duration.seconds(500),
       domainName: 'frontend.example.com',
       domainZone: zone,
       listeners: [

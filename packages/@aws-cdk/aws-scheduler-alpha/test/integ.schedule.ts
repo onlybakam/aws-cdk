@@ -15,6 +15,11 @@ class SomeLambdaTarget implements scheduler.IScheduleTarget {
     return {
       arn: this.fn.functionArn,
       role: this.role,
+      input: scheduler.ScheduleTargetInput.fromText('Input Text'),
+      retryPolicy: {
+        maximumEventAgeInSeconds: 180,
+        maximumRetryAttempts: 3,
+      },
     };
   }
 }
@@ -34,15 +39,42 @@ const role = new iam.Role(stack, 'Role', {
 
 const target = new SomeLambdaTarget(func, role);
 
+const namedGroup = new scheduler.Group(stack, 'NamedGroup', {
+  groupName: 'TestGroup',
+});
+const unnamedGroup = new scheduler.Group(stack, 'UnnamedGroup', {});
+
 new scheduler.Schedule(stack, 'DefaultSchedule', {
   schedule: expression,
   target: target,
+});
+
+new scheduler.Schedule(stack, 'NamedGroupSchedule', {
+  schedule: expression,
+  target: target,
+  group: namedGroup,
+});
+
+new scheduler.Schedule(stack, 'UnnamedGroupSchedule', {
+  schedule: expression,
+  target: target,
+  group: unnamedGroup,
 });
 
 new scheduler.Schedule(stack, 'DisabledSchedule', {
   schedule: expression,
   target: target,
   enabled: false,
+});
+
+new scheduler.Schedule(stack, 'TargetOverrideSchedule', {
+  schedule: expression,
+  target: target,
+  targetOverrides: {
+    input: scheduler.ScheduleTargetInput.fromText('Changed Text'),
+    maxEventAge: cdk.Duration.seconds(360),
+    retryAttempts: 5,
+  },
 });
 
 new cloudwatch.Alarm(stack, 'AllSchedulerErrorsAlarm', {
@@ -58,6 +90,22 @@ new scheduler.Schedule(stack, 'CustomerKmsSchedule', {
   key,
 });
 
+new scheduler.Schedule(stack, 'UseFlexibleTimeWindow', {
+  schedule: expression,
+  target: target,
+  timeWindow: scheduler.TimeWindow.flexible(cdk.Duration.minutes(10)),
+});
+
+const currentYear = new Date().getFullYear();
+new scheduler.Schedule(stack, 'ScheduleWithTimeFrame', {
+  schedule: expression,
+  target: target,
+  start: new Date(`${currentYear + 1}-04-15T06:30:00.000Z`),
+  end: new Date(`${currentYear + 2}-10-01T00:00:00.000Z`),
+});
+
 new IntegTest(app, 'integtest-schedule', {
   testCases: [stack],
 });
+
+app.synth();

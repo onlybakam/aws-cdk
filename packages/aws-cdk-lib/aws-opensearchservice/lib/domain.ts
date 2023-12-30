@@ -424,6 +424,20 @@ export interface WindowStartTime {
 }
 
 /**
+ * The IP address type for the domain.
+ */
+export enum IpAddressType {
+  /**
+   * IPv4 addresses only
+   */
+  IPV4 = 'ipv4',
+  /**
+   * IPv4 and IPv6 addresses
+   */
+  DUAL_STACK = 'dualstack',
+}
+
+/**
  * Properties for an Amazon OpenSearch Service domain.
  */
 export interface DomainProps {
@@ -642,6 +656,16 @@ export interface DomainProps {
    * @default - false
    */
   readonly enableAutoSoftwareUpdate?: boolean;
+
+  /**
+   * Specify either dual stack or IPv4 as your IP address type.
+   * Dual stack allows you to share domain resources across IPv4 and IPv6 address types, and is the recommended option.
+   *
+   * If you set your IP address type to dual stack, you can't change your address type later.
+   *
+   * @default - IpAddressType.IPV4
+   */
+  readonly ipAddressType?: IpAddressType;
 }
 
 /**
@@ -1525,8 +1549,8 @@ export class Domain extends DomainBase implements IDomain, ec2.IConnectable {
 
     // Validate against instance type restrictions, per
     // https://docs.aws.amazon.com/opensearch-service/latest/developerguide/supported-instance-types.html
-    if (isSomeInstanceType('i3', 'r6gd') && ebsEnabled) {
-      throw new Error('I3 and R6GD instance types do not support EBS storage volumes.');
+    if (isSomeInstanceType('i3', 'r6gd', 'im4gn') && ebsEnabled) {
+      throw new Error('I3, R6GD, and IM4GN instance types do not support EBS storage volumes.');
     }
 
     if (isSomeInstanceType('m3', 'r3', 't2') && encryptionAtRestEnabled) {
@@ -1541,10 +1565,10 @@ export class Domain extends DomainBase implements IDomain, ec2.IConnectable {
       throw new Error('T2 and T3 instance types do not support UltraWarm storage.');
     }
 
-    // Only R3, I3 and r6gd support instance storage, per
+    // Only R3, I3, R6GD, and IM4GN support instance storage, per
     // https://aws.amazon.com/opensearch-service/pricing/
-    if (!ebsEnabled && !isEveryDatanodeInstanceType('r3', 'i3', 'r6gd')) {
-      throw new Error('EBS volumes are required when using instance types other than r3, i3 or r6gd.');
+    if (!ebsEnabled && !isEveryDatanodeInstanceType('r3', 'i3', 'r6gd', 'im4gn')) {
+      throw new Error('EBS volumes are required when using instance types other than R3, I3, R6GD, or IM4GN.');
     }
 
     // Only for a valid ebs volume configuration, per
@@ -1883,6 +1907,7 @@ export class Domain extends DomainBase implements IDomain, ec2.IConnectable {
       softwareUpdateOptions: props.enableAutoSoftwareUpdate ? {
         autoSoftwareUpdateEnabled: props.enableAutoSoftwareUpdate,
       } : undefined,
+      ipAddressType: props.ipAddressType,
     });
     this.domain.applyRemovalPolicy(props.removalPolicy);
 

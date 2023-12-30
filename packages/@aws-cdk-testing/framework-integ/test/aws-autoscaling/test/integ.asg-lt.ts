@@ -3,9 +3,11 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
 import * as autoscaling from 'aws-cdk-lib/aws-autoscaling';
+import { AUTOSCALING_GENERATE_LAUNCH_TEMPLATE } from 'aws-cdk-lib/cx-api';
 
 const app = new cdk.App();
 const stack = new cdk.Stack(app, 'aws-cdk-asg-integ');
+stack.node.setContext(AUTOSCALING_GENERATE_LAUNCH_TEMPLATE, true);
 
 const role = new iam.Role(stack, 'role', {
   assumedBy: new iam.ServicePrincipal('ec2.amazonaws.com'),
@@ -82,6 +84,25 @@ new autoscaling.AutoScalingGroup(stack, 'AsgFromMipWithoutDistribution', {
   desiredCapacity: 5,
 });
 
+new autoscaling.AutoScalingGroup(stack, 'AsgFromMipWithInstanceRequirements', {
+  vpc,
+  mixedInstancesPolicy: {
+    launchTemplate: lt,
+    launchTemplateOverrides: [
+      {
+        instanceRequirements: {
+          vCpuCount: { min: 4, max: 8 },
+          memoryMiB: { min: 16384 },
+          cpuManufacturers: ['intel'],
+        },
+      },
+    ],
+  },
+  minCapacity: 0,
+  maxCapacity: 10,
+  desiredCapacity: 5,
+});
+
 new autoscaling.AutoScalingGroup(stack, 'AsgWithGp3Blockdevice', {
   minCapacity: 0,
   maxCapacity: 10,
@@ -98,6 +119,13 @@ new autoscaling.AutoScalingGroup(stack, 'AsgWithGp3Blockdevice', {
       throughput: 125,
     }),
   }],
+  vpc,
+});
+
+new autoscaling.AutoScalingGroup(stack, 'AsgWithIMDSv2', {
+  instanceType: new ec2.InstanceType('t2.micro'),
+  machineImage: ec2.MachineImage.latestAmazonLinux2(),
+  requireImdsv2: true,
   vpc,
 });
 
