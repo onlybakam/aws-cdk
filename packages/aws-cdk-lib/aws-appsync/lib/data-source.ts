@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import { BaseAppsyncFunctionProps, AppsyncFunction } from './appsync-function';
-import { doBundling, findFunctionEntry, findResolverEntry, getResolverName } from './appsync-javascript-utils';
+import { doBundling, findFunctionEntry, findResolverEntries, findResolverEntry, getResolverName } from './appsync-javascript-utils';
 import { CfnDataSource } from './appsync.generated';
 import { IGraphqlApi } from './graphqlapi-base';
 import { BaseResolverProps, Resolver } from './resolver';
@@ -181,6 +181,27 @@ export abstract class BaseDataSource extends Construct {
       code: doBundling(entryFile, bundling ?? {}),
       ...resolverProps,
     });
+  }
+
+  public loadJsResolvers(props?: AppSyncJsResolverProps): Resolver[] {
+    const { resolverFile, resolverDir, bundling, ...resolverProps } = props ?? {};
+    if (resolverFile) {
+      throw new Error('`resolverFile` is not supported when loading multiple resolvers');
+    }
+    const _resolverDir = resolverDir ? [resolverDir] : ['resolvers', this.name];
+    // if a resolver dir was provided, then it is not the default
+    const defaultDir = resolverDir ? false : true;
+    const entryFiles = findResolverEntries(_resolverDir, defaultDir);
+
+    return entryFiles.map(({ typeName, fieldName, entryFile }) => new Resolver(this.api, getResolverName(typeName, fieldName), {
+      api: this.api,
+      dataSource: this,
+      typeName,
+      fieldName,
+      runtime: FunctionRuntime.JS_1_0_0,
+      code: doBundling(entryFile, bundling ?? {}),
+      ...resolverProps,
+    }));
   }
 
   /**

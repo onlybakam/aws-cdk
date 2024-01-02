@@ -115,7 +115,7 @@ export function doBundling(entryFile: string, options: AppSyncBundlingOptions) {
  * Finds the name of the file where the AppSync JS resource is defined
  */
 export function findDefiningFile(
-  functionName: 'createJsResolver' | 'createJsFunction' | 'createJsPipelineResolver',
+  functionName: 'createJsResolver' | 'createJsFunction' | 'createJsPipelineResolver' | 'loadJsResolvers',
 ): string {
   let definingIndex;
   const sites = callsites();
@@ -181,6 +181,29 @@ export function findResolverEntry(
   }
 
   throw new Error(`Cannot find resolver file ${tsFile}, or ${jsFile}.`);
+}
+
+type ResolverEntry = {
+  typeName: string
+  fieldName: string
+  entryFile: string
+}
+export function findResolverEntries(resolverDir: string[], defaultDir: boolean) {
+  const dirname = defaultDir ? path.join(path.dirname(findDefiningFile('loadJsResolvers')), ...resolverDir) : resolverDir[0];
+
+  //list all files in the `dirname` folder
+  const resolverFiles = fs.readdirSync(dirname).map(file => {
+    const match = file.match(/(\w+)\.(\w+)\.(js|ts)/);
+    if (match) {
+      return {
+        typeName: match[1],
+        fieldName: match[2],
+        entryFile: path.join(dirname, file),
+      };
+    }
+    return null;
+  });
+  return resolverFiles.filter(f => f) as ResolverEntry[];
 }
 
 /**
