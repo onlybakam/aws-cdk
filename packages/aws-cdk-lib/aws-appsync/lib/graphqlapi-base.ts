@@ -351,7 +351,7 @@ export abstract class GraphqlApiBase extends Resource implements IGraphqlApi {
       code: doBundling(entryFile, bundling ?? {}),
       ...resolverProps,
     });
-    const node = this.node.defaultChild as CfnResolver;
+    const node = resolver.node.defaultChild as CfnResolver;
     node.kind = 'PIPELINE';
     node.pipelineConfig = {
       functions: (functions ?? []).map((f) => f.functionId),

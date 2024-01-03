@@ -183,6 +183,9 @@ export abstract class BaseDataSource extends Construct {
     });
   }
 
+  /**
+   * Loads JavaScript unit resolvers for this datasource and API using the given properties
+   */
   public loadJsResolvers(props?: AppSyncJsResolverProps): Resolver[] {
     const { resolverFile, resolverDir, bundling, ...resolverProps } = props ?? {};
     if (resolverFile) {
