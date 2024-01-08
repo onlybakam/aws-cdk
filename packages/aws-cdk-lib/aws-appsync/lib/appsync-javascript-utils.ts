@@ -135,7 +135,7 @@ export function findDefiningFile(
 }
 
 export function getResolverName(typeName: string, fieldName: string) {
-  return `${typeName}${fieldName[0].toUpperCase() + fieldName.slice(1)}Resolver`;
+  return `${typeName}_${fieldName}_resolver`;
 }
 
 /**
