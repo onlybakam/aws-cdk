@@ -397,6 +397,51 @@ rule.addTarget(new targets.AppSync(api, {
 }));
 ```
 
+In this code snippet, fields from the event are published via the AppSync mutation. The resolver attached to the `publish` resolver simply returns the passed arguments and adds a timestamp to the event.
+
+```ts
+import * as appsync from 'aws-cdk-lib/aws-appsync';
+
+const api = new appsync.GraphqlApi(this, 'api', {
+  name: 'api',
+  definition: appsync.Definition.fromFile('schema.graphql'),
+  authorizationConfig: {
+    defaultAuthorization: { authorizationType: appsync.AuthorizationType.IAM }
+  },
+});
+
+const noneDs = api.addNoneDataSource('_NONE_');
+noneDs.createResolver('pub', {
+  typeName: 'Mutation',
+  fieldName: 'publish',
+  runtime: appsync.FunctionRuntime.JS_1_0_0,
+  code: appsync.Code.fromInline(`
+  export function request(ctx) {
+    return {
+      payload: {
+        ...ctx.args,
+        createdAt: util.time.nowISO8601(),
+      },
+    };
+  }
+
+  export const response = (ctx) => ctx.result;
+  `),
+});
+
+const rule = new events.Rule(this, 'Rule', {
+  schedule: events.Schedule.rate(cdk.Duration.hours(1)),
+});
+
+rule.addTarget(new targets.AppSync(api, {
+  graphQLOperation: 'mutation Publish($message: String!, $from: String){ publish(message: $message, from: $from) { message from createdAt} }',
+  variables: events.RuleTargetInput.fromObject({
+    message: events.EventField.fromPath('$.detail.message'),
+    from: events.EventField.source,
+  }),
+}));
+```
+
 You can pass an existing role with the proper permissions to be used for the target when the rule is triggered. The code snippet below uses an existing role and grants permissions to use the publish Mutation on the GraphQL API.
 
 ```ts
